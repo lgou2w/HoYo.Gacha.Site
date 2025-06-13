@@ -1,7 +1,15 @@
 {
-  "latest": "ff785e1a55b1e59313aa51e71181172ea545a760",
-  "ff785e1a55b1e59313aa51e71181172ea545a760": {
-    "file": "ff785e1a55b1e59313aa51e71181172ea545a760.json",
-    "url": "/GachaMetadata/ff785e1a55b1e59313aa51e71181172ea545a760.json"
+  "latest": "c3451bd4350e44c9aeafd25248cf528de273bcba",
+  "entries": {
+    "c3451bd4350e44c9aeafd25248cf528de273bcba": {
+      "createdAt": "2025-06-13T01:10:13.424Z",
+      "file": "c3451bd4350e44c9aeafd25248cf528de273bcba.json",
+      "size": 182619
+    },
+    "ff785e1a55b1e59313aa51e71181172ea545a760": {
+      "createdAt": "2025-06-03T09:50:09.843Z",
+      "file": "ff785e1a55b1e59313aa51e71181172ea545a760.json",
+      "size": 179917
+    }
   }
 }

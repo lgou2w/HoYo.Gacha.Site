@@ -1,12 +1,10 @@
-import { Octokit } from '@octokit/core'
-import { restEndpointMethods } from '@octokit/plugin-rest-endpoint-methods'
+import { getStore, GetWithMetadataResult } from '@netlify/blobs'
 import { Config, Context } from '@netlify/functions'
-import { getStore } from '@netlify/blobs'
+import { Octokit } from '@octokit/core'
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN
-
-const MyOctokit = Octokit.plugin(restEndpointMethods)
-const octokit = new MyOctokit({ auth: GITHUB_TOKEN })
+const octokit = new Octokit({
+  auth: process.env.GITHUB_TOKEN,
+})
 
 export const config: Config = {
   method: 'GET',
@@ -17,148 +15,129 @@ export const config: Config = {
 }
 
 export default async function (req: Request, context: Context) {
-  if (!GITHUB_TOKEN) {
-    return new Response('GITHUB_TOKEN is not set', { status: 500 })
-  }
-
   switch (context.url.pathname) {
     case '/release/latest':
-      return await latest(req, context)
+      return releaseLatest(req, context)
     case '/release/download':
-      return await download(req, context)
+      return releaseDownload(req, context)
   }
 }
 
-type Release = {
-  id: number
-  tag_name: string
-  prerelease: boolean
-  created_at: string
-  asset: {
-    name: string
-    size: number
-    download_url: string
-  }
-}
+///=========
+/// private
+///=========
 
-type ReleaseBlob = {
-  lastCheck: number
-  data: Release
-}
+const REPO_OWNER = 'lgou2w'
+const REPO_NAME = 'HoYo.Gacha'
 
-const RELEASE_CACHE_TTL = 10 * 60 * 1000 // 10 minutes
-
-const GITHUB_REPO = {
-  owner: 'lgou2w',
-  repo: 'HoYo.Gacha'
-}
-
-// Minimum release date to start checking
-const MIN_CRATED_AT_START = new Date('2023-05-01T00:00:00Z')
-
-const STORE_RELEASE = 'release'
-const STORE_KEY_LATEST = 'latest'
-
-async function latest (req: Request, context: Context) {
-  const blob = await getLatestReleaseBlob()
-  if (!blob) {
-    return new Response('No release found', { status: 404 })
-  } else {
-    return new Response(JSON.stringify(blob.data), {
-      status: 200,
-      headers: {
-        'Content-Type': 'application/json'
+type LatestReleaseResponseData = {
+  repository: {
+    latestRelease: {
+      tagName: string
+      createdAt: string
+      releaseAssets: {
+        nodes: [{
+          name: string
+          size: string
+          downloadUrl: string
+        }]
       }
-    })
+    }
   }
 }
 
-async function download (req: Request, context: Context) {
-  const id = context.url.searchParams.get('id')
-  if (!id || (id !== 'latest' && !/^\d+$/.test(id))) {
-    return new Response('Invalid id', { status: 400 })
-  }
+type FlattenLatestRelease =
+  & Pick<LatestReleaseResponseData['repository']['latestRelease'], 'tagName' | 'createdAt'>
+  & Pick<LatestReleaseResponseData['repository']['latestRelease']['releaseAssets']['nodes']['0'], 'name' | 'size' | 'downloadUrl'>
 
-  let release: Release | null
-  if (id === 'latest') {
-    const blob = await getLatestReleaseBlob()
-    release = blob?.data || null
-  } else {
-    release = await getGitHubReleaseById(parseInt(id))
-  }
+async function queryGitHubLatestRelease () {
+  const { repository: { latestRelease } } = await octokit.graphql<LatestReleaseResponseData>(`
+    {
+      repository(owner: "${REPO_OWNER}", name: "${REPO_NAME}") {
+        latestRelease {
+          tagName
+          createdAt
+          releaseAssets(first: 1) {
+            nodes {
+              name
+              size
+              downloadUrl
+            }
+          }
+        }
+      }
+    }
+  `)
 
-  if (!release) {
-    return new Response('No release found', { status: 404 })
-  }
-
-  return fetch(release.asset.download_url, {
-    signal: req.signal,
-    referrerPolicy: 'no-referrer',
-  })
+  return {
+    tagName: latestRelease.tagName,
+    createdAt: latestRelease.createdAt,
+    ...latestRelease.releaseAssets.nodes[0]
+  } as FlattenLatestRelease
 }
 
-async function getLatestReleaseBlob (): Promise<ReleaseBlob | null> {
-  const now = Date.now()
-  const store = getStore(STORE_RELEASE)
+const STORE_NAME = 'Release'
+const STORE_KEY_LATEST = 'Latest'
 
-  let blob = await store.get(STORE_KEY_LATEST, { type: 'json' }) as ReleaseBlob | null
+const CACHE_TTL = 30 * 60 * 1000 // 30 minutes
 
-  // Use cached latest release if it's not expired
-  if (blob && now - blob.lastCheck < RELEASE_CACHE_TTL) {
-    console.debug('Using cached latest release:', blob.data.tag_name)
+async function getLatestReleaseBlob (signal?: AbortSignal) {
+  const store = getStore(STORE_NAME)
+  const blob = await store.getWithMetadata(STORE_KEY_LATEST, { type: 'stream' }) as
+    & { data: ReadableStream }
+    & GetWithMetadataResult
+    & { metadata: {
+        latestRelease: FlattenLatestRelease
+        latestCheck: number
+      } }
+    | null
+
+  let ttl: number
+  if (blob && (ttl = Date.now() - blob.metadata.latestCheck) < CACHE_TTL) {
+    console.debug('Using cached latest release: %s (TTL: %ds)',
+      blob.metadata.latestRelease.tagName, Math.round((CACHE_TTL - ttl) / 1000))
     return blob
   }
 
-  // Fetch latest release from GitHub
   console.debug('Fetching latest release from GitHub')
-  const { data: latestRelease } = await octokit.rest.repos.getLatestRelease(GITHUB_REPO)
-  const asset = latestRelease?.assets?.find(asset => asset.name.endsWith('.exe'))
-
-  if (!latestRelease || new Date(latestRelease.created_at) < MIN_CRATED_AT_START || !asset) {
-    return null
+  const latestRelease = await queryGitHubLatestRelease()
+  if (blob && blob.metadata.latestRelease.tagName === latestRelease.tagName) {
+    console.debug('Cached latest release is still valid:', latestRelease.tagName)
+    return blob
   }
 
-  blob = {
-    lastCheck: now,
-    data: {
-      id: latestRelease.id,
-      tag_name: latestRelease.tag_name,
-      prerelease: latestRelease.prerelease,
-      created_at: latestRelease.created_at,
-      asset: {
-        name: asset.name,
-        size: asset.size,
-        download_url: asset.browser_download_url
-      }
-    }
-  }
+  console.debug('Download and cache latest release:', latestRelease.tagName)
+  const newBlob = await fetch(latestRelease.downloadUrl, {
+    signal,
+    referrerPolicy: 'no-referrer',
+  }).then((res) => res.blob())
 
-  console.debug('Latest release:', blob.data.tag_name)
-  await store.setJSON(STORE_KEY_LATEST, blob)
-
-  return blob
-}
-
-async function getGitHubReleaseById (id: number): Promise<Release | null> {
-  const { data: release } = await octokit.rest.repos.getRelease({
-    ...GITHUB_REPO,
-    release_id: id
-  })
-
-  const asset = release?.assets?.find(asset => asset.name.endsWith('.exe'))
-  if (!asset) {
-    return null
-  }
+  const metadata = { latestRelease, latestCheck: Date.now() }
+  const ret = await store.set(STORE_KEY_LATEST, newBlob, { metadata })
 
   return {
-    id: release.id,
-    tag_name: release.tag_name,
-    prerelease: release.prerelease,
-    created_at: release.created_at,
-    asset: {
-      name: asset.name,
-      size: asset.size,
-      download_url: asset.browser_download_url
-    }
+    data: newBlob.stream(),
+    etag: ret.etag,
+    metadata
   }
+}
+
+async function releaseLatest (req: Request, context: Context) {
+  const blob = await getLatestReleaseBlob(req.signal)
+  return new Response(JSON.stringify(blob.metadata.latestRelease), {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  })
+}
+
+async function releaseDownload (req: Request, context: Context) {
+  const blob = await getLatestReleaseBlob(req.signal)
+  return new Response(blob.data, {
+    headers: {
+      'Content-Type': 'application/octet-stream',
+      'Content-Length': blob.metadata.latestRelease.size,
+      'Content-Disposition': `attachment; filename=${blob.metadata.latestRelease.name}`
+    }
+  })
 }

@@ -83,8 +83,8 @@ const CACHE_TTL = 30 * 60 * 1000 // 30 minutes
 
 async function getLatestReleaseBlob (signal?: AbortSignal) {
   const store = getStore(STORE_NAME)
-  const blob = await store.getWithMetadata(STORE_KEY_LATEST, { type: 'stream' }) as
-    & { data: ReadableStream }
+  const blob = await store.getWithMetadata(STORE_KEY_LATEST, { type: 'blob' }) as
+    & { data: Blob }
     & GetWithMetadataResult
     & { metadata: {
         latestRelease: FlattenLatestRelease
@@ -103,6 +103,8 @@ async function getLatestReleaseBlob (signal?: AbortSignal) {
   const latestRelease = await queryGitHubLatestRelease()
   if (blob && blob.metadata.latestRelease.tagName === latestRelease.tagName) {
     console.debug('Cached latest release is still valid:', latestRelease.tagName)
+    const metadata = { latestRelease, latestCheck: Date.now() }
+    await store.set(STORE_KEY_LATEST, blob.data, { metadata })
     return blob
   }
 
@@ -116,7 +118,7 @@ async function getLatestReleaseBlob (signal?: AbortSignal) {
   const ret = await store.set(STORE_KEY_LATEST, newBlob, { metadata })
 
   return {
-    data: newBlob.stream(),
+    data: newBlob,
     etag: ret.etag,
     metadata
   }

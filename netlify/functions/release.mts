@@ -38,7 +38,7 @@ type LatestReleaseResponseData = {
       releaseAssets: {
         nodes: [{
           name: string
-          size: string
+          size: number
           downloadUrl: string
         }]
       }
@@ -138,7 +138,7 @@ async function releaseDownload (req: Request, context: Context) {
   return new Response(blob.data, {
     headers: {
       'Content-Type': 'application/octet-stream',
-      'Content-Length': blob.metadata.latestRelease.size,
+      'Content-Length': String(blob.metadata.latestRelease.size),
       'Content-Disposition': `attachment; filename=${blob.metadata.latestRelease.name}`
     }
   })

@@ -78,44 +78,45 @@ async function queryGitHubLatestRelease () {
 
 const STORE_NAME = 'Release'
 const STORE_KEY_LATEST = 'Latest'
+const STORE_KEY_LATEST_CHECK = 'LatestCheck'
+const CACHE_TTL = 10 * 60 * 1000 // 10 minutes
 
-const CACHE_TTL = 30 * 60 * 1000 // 30 minutes
-
-async function getLatestReleaseBlob (signal?: AbortSignal) {
+async function getLatestReleaseBlob (context: Context, signal?: AbortSignal) {
   const store = getStore(STORE_NAME)
   const blob = await store.getWithMetadata(STORE_KEY_LATEST, { type: 'blob' }) as
     & { data: Blob }
     & GetWithMetadataResult
     & { metadata: {
         latestRelease: FlattenLatestRelease
-        latestCheck: number
       } }
     | null
 
+  const latestCheck = await store.get(STORE_KEY_LATEST_CHECK, { type: 'text' }) as string | null
+
   let ttl: number
-  if (blob && (ttl = Date.now() - blob.metadata.latestCheck) < CACHE_TTL) {
-    console.debug('Using cached latest release: %s (TTL: %ds)',
+  if (blob && latestCheck && (ttl = Date.now() - +latestCheck) < CACHE_TTL) {
+    context.log('Using cached latest release: %s (TTL: %ds)',
       blob.metadata.latestRelease.tagName, Math.round((CACHE_TTL - ttl) / 1000))
     return blob
   }
 
-  console.debug('Fetching latest release from GitHub')
+  context.log('Fetching latest release from GitHub')
   const latestRelease = await queryGitHubLatestRelease()
   if (blob && blob.metadata.latestRelease.tagName === latestRelease.tagName) {
-    console.debug('Cached latest release is still valid:', latestRelease.tagName)
-    const metadata = { latestRelease, latestCheck: Date.now() }
-    await store.set(STORE_KEY_LATEST, blob.data, { metadata })
+    context.log('Cached latest release is still valid:', latestRelease.tagName)
+    await store.set(STORE_KEY_LATEST_CHECK, String(Date.now()))
     return blob
   }
 
-  console.debug('Download and cache latest release:', latestRelease.tagName)
+  context.log('Download and cache latest release:', latestRelease.tagName)
   const newBlob = await fetch(latestRelease.downloadUrl, {
     signal,
     referrerPolicy: 'no-referrer',
   }).then((res) => res.blob())
 
-  const metadata = { latestRelease, latestCheck: Date.now() }
+  const metadata = { latestRelease }
   const ret = await store.set(STORE_KEY_LATEST, newBlob, { metadata })
+  await store.set(STORE_KEY_LATEST_CHECK, String(Date.now()))
 
   return {
     data: newBlob,
@@ -125,7 +126,7 @@ async function getLatestReleaseBlob (signal?: AbortSignal) {
 }
 
 async function releaseLatest (req: Request, context: Context) {
-  const blob = await getLatestReleaseBlob(req.signal)
+  const blob = await getLatestReleaseBlob(context, req.signal)
   return new Response(JSON.stringify(blob.metadata.latestRelease), {
     headers: {
       'Content-Type': 'application/json'
@@ -134,7 +135,7 @@ async function releaseLatest (req: Request, context: Context) {
 }
 
 async function releaseDownload (req: Request, context: Context) {
-  const blob = await getLatestReleaseBlob(req.signal)
+  const blob = await getLatestReleaseBlob(context, req.signal)
   return new Response(blob.data, {
     headers: {
       'Content-Type': 'application/octet-stream',

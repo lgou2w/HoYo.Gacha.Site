@@ -79,7 +79,17 @@ async function queryGitHubLatestRelease () {
 const STORE_NAME = 'Release'
 const STORE_KEY_LATEST = 'Latest'
 const STORE_KEY_LATEST_CHECK = 'LatestCheck'
-const CACHE_TTL = 10 * 60 * 1000 // 10 minutes
+const CACHE_TTL = (() => {
+  let ttl: number = parseInt(process.env.CACHE_TTL || '')
+  if (!Number.isSafeInteger(ttl)) {
+    ttl = 5 * 60 * 1000
+    console.error('Invalid CACHE_TTL, using default: %ds', ttl)
+    return ttl
+  }
+
+  console.info('Using CACHE_TTL: %ds', ttl)
+  return ttl
+})()
 
 async function getLatestReleaseBlob (context: Context, signal?: AbortSignal) {
   const store = getStore(STORE_NAME)

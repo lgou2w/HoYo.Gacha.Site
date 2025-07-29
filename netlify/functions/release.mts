@@ -82,13 +82,13 @@ const STORE_KEY_LATEST_CHECK = 'LatestCheck'
 const CACHE_TTL = (() => {
   let ttl: number = parseInt(process.env.CACHE_TTL || '')
   if (!Number.isSafeInteger(ttl)) {
-    ttl = 5 * 60 * 1000
+    ttl = 5 * 60
     console.error('Invalid CACHE_TTL, using default: %ds', ttl)
-    return ttl
+    return ttl * 1000
   }
 
   console.info('Using CACHE_TTL: %ds', ttl)
-  return ttl
+  return ttl * 1000
 })()
 
 async function getLatestReleaseBlob (context: Context, signal?: AbortSignal) {

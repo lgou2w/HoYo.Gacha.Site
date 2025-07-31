@@ -1,0 +1,225 @@
+:root {
+  font-size: 16px;
+}
+
+body {
+  padding: 3rem;
+  background: #faf9f8;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+.root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  row-gap: 3rem;
+}
+.hero {
+  display: flex;
+  flex-direction: row;
+  column-gap: 3rem;
+}
+.heroText {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  max-width: 50%;
+  row-gap: 1.5rem;
+}
+.heroTextLogo {
+  display: flex;
+  flex-direction: row;
+  column-gap: 0.5rem;
+  align-items: baseline;
+}
+.heroTextTagline {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0078d4;
+  padding: 6px 12px;
+  background: #E5F1FB;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 1.5rem;
+}
+.heroTextFeatures {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+}
+.heroTextFeature {
+  display: flex;
+  flex-direction: column;
+  row-gap: 0.75rem;
+  background: white;
+  padding: 1rem;
+  border-radius: 0.25rem;
+  box-shadow: 0 2.4px 7.2px rgba(0, 0, 0, 0.11), 0 12.8px 28.8px rgba(0, 0, 0, 0.13);
+}
+.heroTextFeature > svg {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0.25rem;
+  color: #0078d4;
+  fill: currentColor;
+  background: #E5F1FB;
+  border-radius: 9999px;
+}
+.heroActions {
+  display: flex;
+  gap: 1rem;
+}
+.button {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+}
+.heroDownload {
+  background: #0078d4;
+  color: white;
+}
+.heroDownload:hover {
+  background: #106EBE;
+}
+.heroTutorial {
+  background: transparent;
+  color: #106EBE;
+  border-color: #106EBE;
+}
+.heroTutorial:hover {
+  background: #E5F1FB;
+}
+.heroVisual {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  max-width: 50%;
+}
+.heroVisualPreview {
+  background: white;
+  border-radius: 0.25rem;
+  box-shadow: 0 2.4px 7.2px rgba(0, 0, 0, 0.11), 0 12.8px 28.8px rgba(0, 0, 0, 0.13);
+}
+.heroVisualHeader {
+  display: flex;
+  flex-direction: row;
+  column-gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background: #f1f1f1;
+  border-bottom: 1px solid #F3F2F1;
+}
+.heroVisualHeader > i {
+  display: block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 9999px;
+  background: #0078d4;
+}
+.heroVisualHeaderBar {
+  width: 100%;
+  font-size: 0.625rem;
+  padding: 0.25rem 0.5rem;
+  background: white;
+  border-radius: 0.25rem;
+  border: 1px solid #fff;
+}
+.heroVisualContent {
+  display: flex;
+  flex-direction: column;
+  row-gap: 1rem;
+  padding: 1rem;
+}
+.heroVisualContentGrids {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+.heroVisualContentGrid {
+  padding: 0.75rem;
+  background: #f1f1f1;
+  border-radius: 0.25rem;
+  border-left: 3px solid #fff;
+}
+.heroVisualContentGrid > :first-child { font-size: 1rem; }
+.heroVisualContentGrid > :last-child { font-size: 2rem; }
+.heroVisualChart {
+  display: flex;
+  flex-direction: row;
+  column-gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.25rem;
+  border: 1px solid #fff;
+  align-items: center;
+}
+.heroVisualChartPie {
+  position: relative;
+  width: 10rem;
+  height: 10rem;
+  border-radius: 9999px;
+  background: conic-gradient(
+    gold 0% 5%,
+    darkorchid 5% 17%,
+    #0078d4 17% 100%
+  );
+}
+.heroVisualChartPieCenter {
+  position: absolute;
+  width: 4.375rem;
+  height: 4.375rem;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform: translate(-50%, -50%);
+  font-size: 1rem;
+  background: white;
+  border-radius: 9999px;
+}
+.heroVisualChartLegend {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  row-gap: 0.5rem;
+  padding: 0.5rem;
+}
+.heroVisualChartLegendItem {
+  display: flex;
+  align-items: center;
+  font-size: 1.25rem;
+  flex: 1;
+}
+.heroVisualChartLegendItem > :first-child {
+  display: block;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-right: 0.5rem;
+  border-radius: 4px;
+}
+.heroVisualChartLegendItem[data-rank="5"] > :first-child { background: gold; }
+.heroVisualChartLegendItem[data-rank="4"] > :first-child { background: darkorchid; }
+.heroVisualChartLegendItem[data-rank="3"] > :first-child { background: #0078d4; }
+.heroVisualChartLegendItem > :last-child {
+  margin-left: auto;
+}
+.footer {
+  max-width: 65%;
+  margin: 1rem auto 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #fff;
+  border-left: 3px solid #fff;
+  border-radius: 0.25rem;
+  background: white;
+  box-shadow: 0 2.4px 7.2px rgba(0, 0, 0, 0.11), 0 12.8px 28.8px rgba(0, 0, 0, 0.13);
+}
+.sponsors {
+  text-align: center;
+}

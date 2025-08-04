@@ -2,10 +2,6 @@ import { getStore, GetWithMetadataResult } from '@netlify/blobs'
 import { Config, Context } from '@netlify/functions'
 import { Octokit } from '@octokit/core'
 
-const octokit = new Octokit({
-  auth: process.env.GITHUB_TOKEN,
-})
-
 export const config: Config = {
   method: 'GET',
   path: [
@@ -51,6 +47,7 @@ type FlattenLatestRelease =
   & Pick<LatestReleaseResponseData['repository']['latestRelease']['releaseAssets']['nodes']['0'], 'name' | 'size' | 'downloadUrl'>
 
 async function queryGitHubLatestRelease () {
+  const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN })
   const { repository: { latestRelease } } = await octokit.graphql<LatestReleaseResponseData>(`
     {
       repository(owner: "${REPO_OWNER}", name: "${REPO_NAME}") {
